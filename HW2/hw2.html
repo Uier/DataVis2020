@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>stacked bar chart</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<link href="https://fonts.googleapis.com/css?family=PT+Serif&display=swap" rel="stylesheet">
+</head>
+<body>
+	<div style="margin: 0 30%;">
+		<label>
+			<label class="switch">
+			    <input id="switch" type="checkbox">
+			    <span class="slider round"></span>
+			</label>
+			<span style="font-family: 'PT Serif'; font-size: 20px;">Sort(Top 20)</span>
+		</label>
+		<!-- <button 
+			id="btn-sort" 
+			style="background-color: #008CBA; color: white; border: 2px solid #008CBA;"
+		>Sort</button>
+		<button 
+			id="btn-reset" 
+			style="background-color: white; color: black; border: 2px solid #f44336"
+		>Reset</button> -->
+	</div>
+	<svg 
+		style="width: 1500; height: 700;"
+	>
+
+	</svg>
+	<script type="text/javascript">
+
+		var width = 1200, height = 600, margin = 100;
+		var colors = ['#003f5c', '#374c80', '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600'];
+
+		d3.csv('census.csv', (err, data) => {
+
+			// Name of States
+			var states = data.map(d => d.State);
+			// Legend
+			var columns = data.columns.filter(d => d != 'State');
+
+			// maximum population among all states
+			var upperbound = 0;
+
+			// computing sum and upper bound
+			data.forEach(d => {
+				d.sum = 0;
+				columns.forEach(col => d.sum += Number(d[col]));
+				upperbound = Math.max(upperbound, d.sum);
+			})
+
+			var stackedData = d3.stack().keys(columns)(data);
+			
+			var xScale = d3.scaleBand()
+				.domain(states)
+				.range([0, width])
+				.paddingOuter(0.33)
+				.paddingInner(0.1);
+			var yScale = d3.scaleLinear()
+				.domain([0, upperbound])
+				.range([height, 0]);
+
+			var xAxis = d3.axisBottom(xScale);
+			var yAxis = d3.axisLeft(yScale).ticks(null, 's');
+
+			d3.select('svg')
+				.append('g')
+				.attr('class', 'x-axis')
+				.attr('transform', 'translate(' + margin + ', ' + height + ')')
+				.call(xAxis)
+				.call(g => g.select('.domain').remove());
+
+			d3.select('svg')
+				.append('g')
+				.attr('transform', 'translate(' + margin + ', ' + 0 + ')')
+				.call(yAxis);
+
+			d3.select('svg')
+				.append('text')
+				.attr('x', margin)
+				.attr('y', yScale(yScale.ticks().pop()))
+				.attr('transform', 'translate(' + 0 + ',' + 200 + ') rotate(-90)')
+				.attr('text-anchor', 'start')
+				.attr('font-family', 'PT Serif')
+				.text('Population');
+
+			var g = d3.select('svg')
+				.selectAll('.bars')
+				.data(stackedData)
+				.enter().append('g')
+				.attr('class', 'bars')
+				.attr('fill', (d, i) => colors[i]);
+
+			g.selectAll('rect')
+				.data(d => d)
+				.enter().append('rect')
+				.attr('x', d => margin+xScale(d.data.State))
+				.attr('y', d => yScale(d[1]))
+				.attr('width', xScale.bandwidth())
+				.attr('height', d => yScale(d[0]) - yScale(d[1]));
+
+			var legend = d3.select('svg')
+				.append('g')
+				.selectAll('g')
+				.data(columns)
+				.enter().append('g')
+				.attr('transform', (d, i) => 'translate(0,' + i * 20 + ')');
+
+			legend.append('rect')
+				.attr('x', width)
+				.attr('width', 19)
+				.attr('height', 19)
+				.attr('fill', (d, i) => colors.slice().reverse()[i]);
+
+			legend.append('text')
+				.attr('x', width - 5)
+				.attr('y', 15)
+				.attr('text-anchor', 'end')
+				.attr('font-family', 'PT Serif')
+				.text(d => d);
+
+			document.getElementById('switch').onchange = () => (
+				document.getElementById('switch').checked ?
+				sort(data, columns, xScale, yScale) :
+				reset(data, columns, xScale, yScale)
+			);
+		});
+
+		function sort(data, columns, xScale, yScale) {
+
+			var cmp = (a, b) => d3.descending(a.sum, b.sum);
+			data = data.sort(cmp).slice(0, 20);
+			var newScale = xScale.copy().domain(data.sort(cmp).map(d => d.State));
+
+			d3.select('.x-axis')
+				.transition()
+				.duration(1000)
+				.call(d3.axisBottom(newScale))
+				.call(g => g.select('.domain').remove());
+
+			d3.selectAll('g.bars')
+				.selectAll('rect')
+				.data(d => d)
+				.attr('height', d => (newScale(d.data.State) ? yScale(d[0]) - yScale(d[1]) : 0))
+				.transition()
+				.duration(1000)
+				.attr('x', d => (newScale(d.data.State) ? margin+newScale(d.data.State) : -100))
+				.attr('width', newScale.bandwidth())
+		};
+
+		function reset(data, columns, xScale, yScale) {
+
+			d3.select('.x-axis')
+				.transition()
+				.delay(1000)
+				.duration(1000)
+				.call(d3.axisBottom(xScale))
+				.call(g => g.select('.domain').remove());
+
+			d3.selectAll('g.bars')
+				.selectAll('rect')
+				.data(d => d)
+				.transition()
+				.duration(1000)
+				.attr('height', 0)
+				.attr('width', xScale.bandwidth())
+				.transition()
+				.attr('x', d => margin+xScale(d.data.State))
+				.transition()
+				.duration(1000)
+				.attr('height', d => yScale(d[0]) - yScale(d[1]))
+		};
+
+	</script>
+	<style type="text/css">
+		/*button {
+			padding: 10px 20px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 16px;
+			margin: 4px 2px;
+			cursor: pointer;
+		}*/
+		/* The switch - the box around the slider */
+		.switch {
+		  position: relative;
+		  display: inline-block;
+		  width: 60px;
+		  height: 34px;
+		}
+
+		/* Hide default HTML checkbox */
+		.switch input {
+		  opacity: 0;
+		  width: 0;
+		  height: 0;
+		}
+
+		/* The slider */
+		.slider {
+		  position: absolute;
+		  cursor: pointer;
+		  top: 0;
+		  left: 0;
+		  right: 0;
+		  bottom: 0;
+		  background-color: #ccc;
+		  -webkit-transition: .4s;
+		  transition: .4s;
+		}
+
+		.slider:before {
+		  position: absolute;
+		  content: "";
+		  height: 26px;
+		  width: 26px;
+		  left: 4px;
+		  bottom: 4px;
+		  background-color: white;
+		  -webkit-transition: .4s;
+		  transition: .4s;
+		}
+
+		input:checked + .slider {
+		  background-color: #2196F3;
+		}
+
+		input:focus + .slider {
+		  box-shadow: 0 0 1px #2196F3;
+		}
+
+		input:checked + .slider:before {
+		  -webkit-transform: translateX(26px);
+		  -ms-transform: translateX(26px);
+		  transform: translateX(26px);
+		}
+
+		/* Rounded sliders */
+		.slider.round {
+		  border-radius: 34px;
+		}
+
+		.slider.round:before {
+		  border-radius: 50%;
+		}
+	</style>
+</body>
+</html>

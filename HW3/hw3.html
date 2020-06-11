@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>stacked bar chart</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://unpkg.com/textures@1.2.0/dist/textures.js"></script>
+	<link href="https://fonts.googleapis.com/css?family=PT+Serif&display=swap" rel="stylesheet">
+</head>
+<body>
+	<form>
+		<label><input type="radio" name="channel" id="color">Color</label>
+		<label><input type="radio" name="channel" id="orientation">Orientation</label>
+		<label><input type="radio" name="channel" id="value">Value</label>
+		<label><input type="radio" name="channel" id="texture">Texture</label>
+		<label><input type="radio" name="channel" id="size" disabled>Size</label>
+		<label><input type="radio" name="channel" id="shape" disabled>Shape</label>
+	</form>
+	<form>
+		<label><input type="radio" name="dataset" id="population" checked="">Population</label>
+		<label><input type="radio" name="dataset" id="area">Area</label>
+	</form>
+
+	<svg id="svg-map" width="1200" height="400"></svg>
+
+	<h4 id="h4-text"></h4>
+
+	<svg id="svg-bar" width="1200" height="400"></svg>
+
+    <script type="text/javascript">
+    	d3.json("usa_mainland.json", drawUSA);
+
+    	function drawUSA(error, states) {
+    		var width = 1200;
+    		var height = 400;
+
+        	var projection = d3.geoEquirectangular()
+        		.fitExtent([[0,0], [width, height]], states);
+        	
+			var geoGenerator = d3.geoPath()
+				.projection(projection);
+
+			var paths = d3.select('#svg-map')
+				.selectAll('path')
+				.data(states.features)
+				.enter()
+				.append('path')
+				.attr('id', d => `map-${d.properties.STUSPS10}`)
+				.attr('fill', '#ddd')
+		  		.attr('stroke-width', 2)
+		  		.attr('stroke', '#aaa')
+				.attr('d', geoGenerator);
+
+			d3.select('#svg-map')
+				.selectAll('path')
+				.on('mouseover', function() {
+					var node = document.getElementById('svg-map');
+					node.insertBefore(this, null)
+					d3.select(this)
+						.style('stroke-width', 2)
+						.style('stroke', 'blue');
+					d3.select(`#bar-${this.id.substr(-2)}`)
+						.style('fill', 'red');
+				})
+				.on('mouseleave', function() {
+					d3.select(this)
+						.style('stroke', '#aaa');
+					d3.select(`#bar-${this.id.substr(-2)}`)
+						.style('fill', '#003865');
+				});
+		}
+
+		values = {
+			color: ['#ffa5ab', '#e98a98', '#d36e86', '#bc5376', '#a53867'],
+			value: ['#ffffff', '#b9b9b9', '#777777', '#3b3b3b', '#000000'],
+			texture: [
+				textures.lines().heavier(0.5).thicker(1.3), 
+				textures.lines().heavier(1).thicker(1.1), 
+				textures.lines().heavier(1.5).thicker(0.9), 
+				textures.lines().heavier(2).thicker(0.7), 
+				textures.lines().heavier(2.5).thicker(0.5)
+			],
+			orientation: [
+				textures.lines().orientation("4/8").thicker(1.3),
+				textures.lines().orientation("5/8").thicker(0.5),
+				textures.lines().orientation("6/8").thicker(0.8),
+				textures.lines().orientation("7/8").thicker(0.5),
+				textures.lines().orientation("8/8").thicker(1.3),
+			],
+			shape: ['⎔', '□', '▱', '△', '◯']
+		};
+
+		function Mark(data, channel, dataset) {
+			var scale = d3.scaleQuantile()
+				.domain(data.map(d => d[dataset]))
+				.range([0, 1, 2, 3, 4]);
+
+			data.forEach(d => {
+				if ( channel != 'texture' && channel != 'orientation' ) {
+					console.log(values[channel][scale(d[dataset])])
+					d3.select(`#map-${d.State}`)
+						.transition()
+						.duration(500)	
+						.style('fill', values[channel][scale(d[dataset])]);
+				} else {
+					var t=textures.lines();
+					d3.select('#svg-map').call(values[channel][scale(d[dataset])])
+					d3.select(`#map-${d.State}`)
+						.transition()
+						.duration(500)
+						.style('fill', values[channel][scale(d[dataset])].url());
+				}
+			})
+
+			var legend = d3.select('#svg-map')
+				.append('g')
+				.selectAll('g')
+				.data(values[channel])
+				.enter().append('g')
+				.attr('transform', (d, i) => 'translate(' + i * 40 + ', 0)');
+
+			legend.append('rect')
+				.attr('x', 5)
+				.attr('y', 350)
+				.attr('width', 40)
+				.attr('height', 40)
+				.attr('fill', 'transparent')
+				.attr('stroke', 'transparent')
+
+			if ( channel != 'texture' && channel != 'orientation' ) {
+				legend.selectAll('rect')
+					.transition()
+					.duration(500)
+					.style('stroke', 'black')
+					.style('fill', d => d);
+			} else {
+				values[channel].forEach(v => d3.select('#svg-map').call(v))
+				legend.selectAll('rect')
+					.transition()
+					.duration(500)
+					.style('stroke', 'black')
+					.style('fill', d => d.url());
+			}
+		};
+
+		function drawBar(data, states, columns, upperbound, statesInfo, dataset) {
+			return () => {
+				var width = 1000, height = 300, margin = 100;
+
+				var xScale = d3.scaleBand()
+					.domain(states)
+					.range([0, width])
+					.paddingOuter(0.33)
+					.paddingInner(0.1);
+
+				var yScale = d3.scaleLinear()
+					.domain([0, upperbound[dataset]])
+					.range([height, 0]);
+
+				var xAxis = d3.axisBottom(xScale);
+				var yAxis = d3.axisLeft(yScale).ticks(null, 's');
+				d3.select('#svg-bar')
+					.selectAll('g')
+					.remove();
+
+				d3.select('#svg-bar')
+					.append('g')
+					.attr('class', 'x-axis')
+					.attr('transform', 'translate(' + margin + ', ' + height + ')')
+					.call(xAxis)
+					.call(g => g.select('.domain').remove());
+
+				d3.select('#svg-bar')
+					.append('g')
+					.attr('transform', 'translate(' + margin + ', ' + 0 + ')')
+					.call(yAxis)
+
+				d3.select('#svg-bar')
+					.select('.population')
+					.remove();
+
+				d3.select('#svg-bar')
+					.append('text')
+					.attr('x', margin)
+					.attr('y', yScale(yScale.ticks().pop()))
+					.attr('transform', 'translate(' + 0 + ',' + 200 + ') rotate(-90)')
+					.attr('text-anchor', 'start')
+					.attr('font-family', 'PT Serif')
+					.attr('class', 'population')
+					.text((dataset == 'sum' ? 'Population' : 'Area'));
+
+				var g = d3.select('#svg-bar');
+
+				g.selectAll('rect')
+					.data(data)
+					.enter().append('rect');
+
+				g.selectAll('rect')
+					.attr('x', d => margin+xScale(d.State))
+					.attr('y', d => yScale(d[dataset]))
+					.attr('id', d => `bar-${d.State}`)
+					.attr('width', xScale.bandwidth())
+					.attr('height', d => yScale(0)-yScale(d[dataset]))
+					.style('fill', '#003865');
+
+				g.selectAll('rect')
+					.on('mouseover', function() {
+						d3.select(this)
+							.style('fill', 'red');
+						var text = document.getElementById('h4-text');
+						text.innerText = `${this.id.substr(-2)}: ${statesInfo[dataset][this.id.substr(-2)]}`
+						var node = document.getElementById('svg-map');
+						var target = document.getElementById(`map-${this.id.substr(-2)}`);
+						node.insertBefore(target, null)
+						d3.select(`#map-${this.id.substr(-2)}`)
+							.style('stroke-width', 2)
+							.style('stroke', 'blue');
+					})
+					.on('mouseleave', function() {
+						d3.select(this)
+							.style('fill', '#003865');
+						d3.select(`#map-${this.id.substr(-2)}`)
+							.style('stroke', '#aaa');
+					});
+			}
+
+		}
+
+		d3.csv('census.csv', (err, data) => {
+
+			// Name of States
+			var states = data.map(d => d.State);
+			// Legend
+			var columns = data.columns.filter(d => (d != 'State' && d != 'Area(km^2)'));
+
+			// maximum population among all states
+			var upperbound = {'sum': 0, 'Area(km^2)': 0};
+			var statesInfo = {'sum': {}, 'Area(km^2)': {}};
+
+			console.log(statesInfo)
+
+			// computing sum and upper bound
+			data.forEach(d => {
+				d.sum = 0;
+				d['Area(km^2)'] = Number(d['Area(km^2)'].replace(/\,/g, ''));
+				columns.forEach(col => d.sum += Number(d[col]));
+				statesInfo['sum'][`${d.State}`] = d.sum;
+				statesInfo['Area(km^2)'][`${d.State}`] = d['Area(km^2)'];
+				upperbound['sum'] = Math.max(upperbound['sum'], d.sum);
+				upperbound['Area(km^2)'] = Math.max(upperbound['Area(km^2)'], d['Area(km^2)']);
+			})
+
+			var cur = '', dataset = 'sum';
+			drawBar(data, states, columns, upperbound, statesInfo, dataset)();
+
+			d3.selectAll('#color').on('click', () => { Mark(data, 'color', dataset); cur='color' });
+			d3.selectAll('#size').on('change', () => { Mark(data, 'size', dataset); cur='size' });
+			d3.selectAll('#value').on('change', () => { Mark(data, 'value', dataset); cur='value' });
+			d3.selectAll('#orientation').on('change', () => { Mark(data, 'orientation', dataset); cur='orientation' });
+			d3.selectAll('#shape').on('change', () => { Mark(data, 'shape', dataset); cur='shape' });
+			d3.selectAll('#texture').on('change', () => { Mark(data, 'texture', dataset); cur='texture' });
+			d3.selectAll('#population').on('change', () => {
+				dataset = 'sum';
+				drawBar(data, states, columns, upperbound, statesInfo, dataset)();
+				if ( cur != '' ) { 
+					Mark(data, cur, dataset);
+				}
+			});
+			d3.selectAll('#area').on('change', () => { 
+				dataset='Area(km^2)';
+				drawBar(data, states, columns, upperbound, statesInfo, dataset)(); 
+				if ( cur != '' ) { 
+					Mark(data, cur, dataset); 
+				} 
+			});
+		});
+
+	</script>
+	<style>
+		body {
+		  font-family: "Helvetica Neue", Helvetica, sans-serif;
+		  font-size: 14px;
+		  color: #333;
+		}
+		/*#svg-bar rect:hover {
+		  cursor: pointer;
+		}*/
+	</style>
+</body>
+</html>

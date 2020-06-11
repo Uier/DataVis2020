@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>d3-selection</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+<body>
+	<svg style="width: 1280; height: 1024;">
+
+	</svg>
+	<script type="text/javascript">
+		var padding = 10;
+		var barH = 20;
+		var fontSize = 18;
+		var scaleFactor = 1e-4;
+		var lowPopulation = 2e6;
+		var cities = [
+			{ name: '新北市', population: 4020572, },
+			{ name: '臺中市', population: 2815704, },
+			{ name: '高雄市', population: 2774571, },
+			{ name: '臺北市', population: 2642877, },
+			{ name: '桃園市', population: 2250954, },
+			{ name: '臺南市', population: 1880216, },
+			{ name: '彰化縣', population: 1272449, },
+			{ name: '屏東縣', population: 818493, },
+			{ name: '雲林縣', population: 680963, },
+			{ name: '新竹縣', population: 564296, },
+			{ name: '苗栗縣', population: 545433, },
+			{ name: '嘉義縣', population: 502718, },
+			{ name: '南投縣', population: 493984, },
+			{ name: '宜蘭縣', population: 454161, },
+			{ name: '新竹市', population: 449113, },
+			{ name: '基隆市', population: 368932, },
+			{ name: '花蓮縣', population: 326247, },
+			{ name: '嘉義市', population: 267653, },
+			{ name: '臺東縣', population: 216633, },
+			{ name: '金門縣', population: 140253, },
+			{ name: '澎湖縣', population: 105147, },
+			{ name: '連江縣', population: 13080, },
+		];
+		d3.select("svg").selectAll("text")
+			.data(cities)
+			.enter().append("text").exit().remove();
+
+		d3.select("svg").selectAll("text")
+			.sort((a, b) => d3.ascending(a.population, b.population))
+			.attr("x", 20)
+			.attr("y", (d, i) => {
+				return (i + 1) * (barH + padding);
+			})
+			.attr('font-size', fontSize)
+			.text((d, i) => {console.log(d.name); return d.name;});
+
+		d3.select("svg").selectAll("rect")
+			.data(cities)
+			.enter().append("rect").exit().remove();
+
+		d3.select("svg").selectAll("rect")
+			.sort((a, b) => d3.ascending(a.population, b.population))
+			.attr("x", 100)
+			.attr("y", (d, i) => {
+				return padding + i * (barH + padding);
+			})
+			.attr("width", (d, i) => {
+				return d.population * scaleFactor;
+			})
+			.attr("height", barH)
+			.style("fill", "pink");
+
+		d3.select("svg").selectAll("rect")
+			.filter((d, i) => {
+				return d.population < lowPopulation;
+			})
+			.style("fill", "skyblue");
+	</script>
+</body>
+</html>

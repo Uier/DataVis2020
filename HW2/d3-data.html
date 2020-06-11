@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>d3-selection</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+
+</head>
+<body>
+	<svg id="g1">
+		<rect/>
+		<rect/>
+		<rect/>
+		<rect/>
+		<rect/>
+		<rect/>
+	</svg>
+	<svg id="g2">
+		<rect/>
+		<rect/>
+		<rect/>
+	</svg>	
+	<script type="text/javascript">
+		var padding = 10;
+		var barH = 20;
+		var data = [70, 30, 50, 100, 120];
+		d3.select("#g1")
+			.selectAll("rect")
+			.data(data)
+			.exit()
+			.remove()
+			.enter()
+			.append("rect");
+		d3.select("#g1")
+			.selectAll("rect")
+			.attr("x", 10)
+			.attr("y", (d, i) => {
+				return padding + i * (barH + padding);
+			})
+			.attr("width", (d, i) => {
+				return d;
+			})
+			.attr("height", barH)
+			.style("fill", "pink");
+
+		d3.select("#g2")
+			.selectAll("rect")
+			.data(data)
+			.enter()
+			.append("rect")
+			.exit()
+			.remove();
+		d3.select("#g2")
+			.selectAll("rect")
+			.attr("x", 10)
+			.attr("y", (d, i) => {
+				return padding + i * (barH + padding);
+			})
+			.attr("width", (d, i) => {
+				return d;
+			})
+			.attr("height", barH)
+			.style("fill", "blue");
+	</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>d3-stacked-bar-chart</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+<body>
+	<svg style="width: 1280; height: 1024;">
+		
+	</svg>
+	<script type="text/javascript">
+		var data = [
+			{ day: 'Mon', apricots: 120, blueberries: 180, cherries: 100 },
+			{ day: 'Tue', apricots:  60, blueberries: 185, cherries: 105 },
+			{ day: 'Wed', apricots: 100, blueberries: 215, cherries: 110 },
+			{ day: 'Thu', apricots:  80, blueberries: 230, cherries: 105 },
+			{ day: 'Fri', apricots: 120, blueberries: 240, cherries: 105 },
+		];
+		var colors = ['#FBB65B', '#513551', '#DE3163'];
+
+		var stackGenerator = d3.stack()
+			.keys(['apricots', 'blueberries', 'cherries']);
+
+		console.dir(stackGenerator(data));
+		/*
+		[
+			[[  0, 120], [  0,  60], [  0, 100], [  0,  80], [  0, 120]],
+			[[120, 300], [ 60, 245], [100, 315], [ 80, 310], [120, 360]],
+			[[300, 400], [245, 350], [315, 425], [310, 415], [360, 465]],
+		]
+		*/
+
+		var g = d3.select('svg')
+			.selectAll('.series')
+			.data(stackGenerator(data))
+			.enter().append('g')
+			.classed('series', true)
+			.attr('fill', (d, i) => colors[i]);
+
+		/*
+			3 groups, each of them has 5 rects
+		*/
+
+		g.selectAll('rect')
+			.data(d => d)
+			.enter().append('rect')
+			.attr('x', (d, i) => i * 50)
+			.attr('y', d => d[0])
+			.attr('width', 49)
+			.attr('height', d => d[1]-d[0]);
+	</script>
+</body>
+</html>
