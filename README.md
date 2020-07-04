@@ -5,19 +5,19 @@ Homework / Project of Data Visualization Spring 2020
 
 ### HW2
 
-<a href="https://Uier.github.io/HW2/hw2.html" target="_blank" rel="noopener noreferrer">Stacked Bar Chart</a>
+<a href="https://uier.github.io/DataVis2020/HW2/hw2.html" target="_blank" rel="noopener noreferrer">Stacked Bar Chart</a>
 
 ### HW3
 
-<a href="https://Uier.github.io/DataVis2020/HW3/hw3.html" target="_blank" rel="noopener noreferrer">Map</a>
+<a href="https://uier.github.io/DataVis2020/HW3/hw3.html" target="_blank" rel="noopener noreferrer">Map</a>
 
 ## Pandas & Matplotlib
 
 ### HW1
 
-<a href="https://Uier.github.io/HW1/Q1.html" target="_blank" rel="noopener noreferrer">Q1</a>
+<a href="https://uier.github.io/DataVis2020/HW1/Q1.html" target="_blank" rel="noopener noreferrer">Q1</a>
 
-<a href="https://Uier.github.io/HW1/Q2.html" target="_blank" rel="noopener noreferrer">Q2</a>
+<a href="https://uier.github.io/DataVis2020/HW1/Q2.html" target="_blank" rel="noopener noreferrer">Q2</a>
 
 ## About me
 
