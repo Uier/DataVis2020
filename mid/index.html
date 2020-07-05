@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Index</title>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+	<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<script src="https://d3js.org/topojson.v1.min.js"></script>
+	<script src="https://unpkg.com/textures@1.2.0/dist/textures.js"></script>
+</head>
+<body>
+	<style>
+		* {
+			font-family: 'Roboto Slab', serif;
+		}
+		#container {
+			height:100%;
+			background: #fafafa;
+		}
+		.top-view {
+			background-color: #fafafa;
+		}
+		.top-blocks {
+			border-right: 1px #a0a0a0 solid;
+			color: #1f447f;
+			overflow: auto;
+		}
+		.timeline {
+			color: #1f447f;
+			overflow: auto;
+		}
+		h1 {
+			color: #1f447f;
+		}
+		.option {
+			border-right: 0px;
+		}
+		.country {
+			cursor: pointer;
+		}
+	</style>
+
+<div class="container-fluid top-view" style="height: 100vh;">
+	<div class="hidden" id="tooltip"></div>
+	<div class="row" style="height: 70%;">
+		<div class="top-blocks map col-6 px-0 h-100">
+			<div class="container px-0 h-100" id="map-container"></div>
+		</div>
+		<div class="top-blocks channel col-1">
+			<div class="container px-0">
+				<label for="select-channel" style="font-size: 24px;">Channels: </label>
+				<select id="select-channel">
+					<option value="color">Color</option>
+						<option value="texture">Texture</option>
+						<option value="oriented">Oriented</option>
+					</select>
+					<label for="select-cont" style="font-size: 24px;">Continents: </label>
+					<select id="select-cont">
+						<option value="WD">World</option>
+						<option value="AS">Asia</option>
+						<option value="AF">Africa</option>
+						<option value="EU">Europe</option>
+						<option value="NA">North America</option>
+						<option value="OC">Oceania</option>
+						<option value="SA">South America</option>
+					</select>
+				</div>
+			</div>
+			<div class="top-blocks line-chart col-4 h-100">
+				<div class="container px-0 h-100" id="line-chart-container"></div>
+			</div>
+			<div class="top-blocks option col-1" style="font-size: 24px;">
+				Options
+				<div class="form-check">
+					<input class="form-check-input" name="checkbox" type="checkbox" id="check-cases" checked style="width: 18px; height: 18px;">
+					<label class="form-check-label" for="check-cases">Cases</label>
+				</div>
+				<div class="form-check">
+					<input class="form-check-input" name="checkbox" type="checkbox" id="check-deaths" style="width: 18px; height: 18px;">
+					<label class="form-check-label" for="check-deaths">Deaths</label>
+				</div>
+			</div>
+		</div>
+		<div class="row justify-content-center" style="height: 30%">
+			<div class="col-2 align-self-center">
+				<h1>Date: </h1>
+				<h1>Country: </h1>
+				<h1>Cases: </h1>
+				<h1>Deaths: </h1>
+			</div>
+			<div class="col-3 align-self-center">
+				<h1 id="date"></h1>
+				<h1 id="country" style="white-space: pre;"></h1>
+				<h1 id="cases"></h1>
+				<h1 id="deaths"></h1>
+			</div>
+			<div class="col-7 timeline align-self-center">
+				<label for="customRange1" style="font-size: 48px;">Timeline</label>
+				<input type="range" class="custom-range" id="customRange1" min="1577721600000" max="1590508800000" step="86400000" value="1577721600000">
+			</div>
+		</div>
+	</div>
+	
+	<script type="module">
+		import Map from './src/map.js';
+		import tooltip from './src/tooltip.js';
+		
+		function changeCont() {
+			// hide countries in other conts
+			let cont = document.getElementById("select-cont").value,
+			bounds = [[Infinity, Infinity], [-Infinity, -Infinity]];
+
+			map.topo.forEach(e => {
+				if ( e.id ) {
+					if ( e.properties.cont === cont || cont === "WD" ) {
+						const b = map.path.bounds(e);
+
+						bounds[0][0] = Math.min(bounds[0][0], b[0][0]);
+						bounds[1][0] = Math.max(bounds[1][0], b[1][0]);
+						bounds[0][1] = Math.min(bounds[0][1], b[0][1]);
+						bounds[1][1] = Math.max(bounds[1][1], b[1][1]);
+
+						document.getElementById(`country-${e.id}`).style.visibility = "visible";
+					} else {
+						document.getElementById(`country-${e.id}`).style.visibility = "hidden";
+					}
+				}
+			});
+			// move viewpoint
+			const dx = bounds[1][0] - bounds[0][0],
+						dy = bounds[1][1] - bounds[0][1],
+						x = (bounds[0][0] + bounds[1][0]) / 2,
+						y = (bounds[0][1] + bounds[1][1]) / 2,
+						width = map.width,
+						height = map.height,
+						scale = Math.max(1, Math.min(8, 0.9 / Math.max(dx / width, dy / height))),
+						translate = [width/2 - scale*x, height/2 - scale*y];
+
+			map.svg.transition()
+      	.duration(750)
+				.call( map.zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale) );
+			map.update();
+			// chart.update(cont);
+		}
+
+		const map = new Map(d3.select('#map-container'));
+
+		(async () => {
+			await map.loadJSON("data/countries-10m-cont.json");
+			await map.loadCovid("data/covid-19.json");
+
+			map.draw();
+
+			// mouse click country event
+			map.g.selectAll('.country').on('click', function() {
+				chart.changeCountry(this.id, this.__data__.properties.name);
+			});
+			d3.select(window).on("resize", () => map.redraw());
+			d3.select('#select-channel').on("change", () => map.draw());
+			// d3.select('#select-cont').on("change", () => changeCont());
+
+			d3.select('#customRange1').on("input", function () {
+				map.draw(/* this.value */);
+				// chart.update(cont);
+				chart.update(document.getElementById('select-cont').value);
+			});
+		})()
+
+		import LineChart from './src/line-chart.js';
+
+		const chart = new LineChart(d3.select('#line-chart-container'));
+
+		(async () => {
+			await chart.loadCovid("data/covid-19.json");
+			
+			chart.draw();
+
+			// select continent event
+			d3.select('#select-cont').on("change", () => { changeCont(); chart.draw(); });
+			// check/uncheck options event
+			d3.selectAll('.form-check input[type=checkbox]').on("change", () => chart.draw());
+			// resize window event
+			d3.select(window).on("resize", () => { chart.redraw(); map.redraw(); });
+		})()
+	</script>
+	<style>
+		.country:hover{
+			stroke: #fff;
+			stroke-width: 1.5px;
+		}
+		.text{
+			font-size:10px;
+			text-transform:capitalize;
+		}
+		.hidden {
+			display: none;
+		}
+		#tooltip {
+			color: #222;
+			background: #fff;
+			padding: .5em;
+			text-shadow: #f5f5f5 0 1px 0;
+			border-radius: 2px;
+			box-shadow: 0px 0px 2px 0px #a6a6a6;
+			opacity: 0.9;
+			position: absolute;
+			z-index: 99;
+		}
+		/* .graticule {
+			fill: none;
+			stroke: #bbb;
+			stroke-width: .5px;
+			stroke-opacity: .5;
+		} */
+		.equator {
+			stroke: #ccc;
+			stroke-width: 1px;
+		}
+	</style>
+</body>
+</html>
